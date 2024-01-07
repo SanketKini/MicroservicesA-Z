@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+ com.awd.feature.toggle.configuration.FeatureToggleConfiguration
