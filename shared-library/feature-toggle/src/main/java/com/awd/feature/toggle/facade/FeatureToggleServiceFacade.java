@@ -2,6 +2,7 @@ package com.awd.feature.toggle.facade;
 
 import com.awd.feature.toggle.model.Feature;
 import com.awd.feature.toggle.model.FeatureEnvData;
+import com.awd.feature.toggle.model.RegisterServiceRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +23,8 @@ import java.util.stream.Collectors;
 public class FeatureToggleServiceFacade {
 
     public static final String ACTIVE = "active";
-    private static final String LIST_FEATURES_URI = "/features/list/{state}";
+    private static final String LIST_FEATURES_URI = "/api/features/{env}/list/{state}";
+    private static final String REGISTER_SERVICE_URI = "/api/features/{env}/flags/register";
 
     @Autowired
     @Qualifier("featureToggleWebClient")
@@ -53,18 +55,38 @@ public class FeatureToggleServiceFacade {
 
     private List<Feature> getAllFeatures(String correlationId) {
         return featureToggleWebClient.get()
-                .uri(uriBuilder -> uriBuilder.path(LIST_FEATURES_URI).build(ACTIVE))
+                .uri(uriBuilder -> uriBuilder.path(LIST_FEATURES_URI).build(featureEnvData.getEnv(), ACTIVE))
                 .header("X-Correlation-Id", correlationId)
                 .header("X-Service-Name", featureEnvData.getEnv() + "/" + featureEnvData.getServiceName())
                 .retrieve()
                 .onStatus(this::isNot2xxStatus, clientResponse -> {
-                    log.error("Got error status: {}, body: {}, correlatioId: {}", clientResponse.statusCode(), clientResponse.bodyToMono(String.class), correlationId);
+                    log.error("Got error status: {}, body: {}, correlationId: {}", clientResponse.statusCode(), clientResponse.bodyToMono(String.class), correlationId);
                     return Mono.error(new IllegalStateException("Could not fetch list of feature flags from service call. Failed with HTTP Status: " + clientResponse.statusCode()));
                 })
                 .bodyToFlux(Feature.class)
                 .collectList()
                 .doOnSuccess(features -> log.debug("Fetched feature list of size: {}", features.size()))
                 .block();
+    }
+
+    public void register(String correlationId) {
+        final RegisterServiceRequest registerServiceRequest = RegisterServiceRequest.builder()
+                .serviceFeatures(featureEnvData.getFeatures())
+                .serviceName(featureEnvData.getServiceName())
+                .build();
+        featureToggleWebClient.post()
+                .uri(uriBuilder -> uriBuilder.path(REGISTER_SERVICE_URI).build(featureEnvData.getEnv()))
+                .header("X-Correlation-Id", correlationId)
+                .header("X-Service-Name", featureEnvData.getEnv() + "/" + featureEnvData.getServiceName())
+                .body(Mono.just(registerServiceRequest), RegisterServiceRequest.class)
+                .retrieve()
+                .onStatus(this::isNot2xxStatus, clientResponse -> {
+                    log.error("Got error status: {}, body: {}, correlationId: {}", clientResponse.statusCode(), clientResponse.bodyToMono(String.class), correlationId);
+                    return Mono.error(new IllegalStateException("Could not fetch list of feature flags from service call. Failed with HTTP Status: " + clientResponse.statusCode()));
+                })
+                .toBodilessEntity()
+                .block();
+log.debug("Successfully registered service: {} for features: {}", featureEnvData.getServiceName(), featureEnvData.getFeatures());
     }
 
     private boolean isNot2xxStatus(HttpStatusCode httpStatusCode) {

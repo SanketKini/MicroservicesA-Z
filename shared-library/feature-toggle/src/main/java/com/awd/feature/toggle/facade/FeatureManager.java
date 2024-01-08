@@ -31,7 +31,7 @@ public class FeatureManager {
     private Map<String, Boolean> featureMap;
 
 
-    private static synchronized FeatureManager getInstance() {
+    public static synchronized FeatureManager getInstance() {
         return instance;
     }
 
@@ -87,7 +87,9 @@ public class FeatureManager {
         final String correlationId = UUID.randomUUID().toString();
         log.info("Loading feature map from feature toggle service {} for features {} with correlation id {}",
                 featureEnvData.getFtServiceUrl(), featureEnvData.getFeatures(), correlationId);
-        return featureToggleServiceFacade.getServiceFeatureMap(correlationId);
+        Map<String, Boolean> serviceMap = featureToggleServiceFacade.getServiceFeatureMap(correlationId);
+        featureToggleServiceFacade.register(correlationId);
+        return serviceMap;
     }
 
     private boolean isAnyEmpty(Object... items) {
@@ -101,5 +103,4 @@ public class FeatureManager {
         }
         return false;
     }
-
 }

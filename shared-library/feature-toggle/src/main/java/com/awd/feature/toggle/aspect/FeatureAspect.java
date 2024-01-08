@@ -3,6 +3,7 @@ package com.awd.feature.toggle.aspect;
 
 import com.awd.feature.toggle.annotations.FeatureFlag;
 import com.awd.feature.toggle.annotations.ToggleOffReturn;
+import com.awd.feature.toggle.facade.FeatureManager;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -16,6 +17,7 @@ import java.lang.reflect.Parameter;
 @Aspect
 @Slf4j
 public class FeatureAspect {
+
     @Around(value = "execution( * *(..)) && @annotation(featureFlag)", argNames = "featureFlag")
     public Object toggleFeatureAnnotation(ProceedingJoinPoint point, FeatureFlag featureFlag) throws Throwable {
         return toggleFeature(point, featureFlag);
@@ -33,7 +35,7 @@ public class FeatureAspect {
 
     private Object toggleFeature(ProceedingJoinPoint point, FeatureFlag featureFlag) throws Throwable {
         final String feature = featureFlag.value();
-        final boolean enabled = true;//FeatureManager.getInstance().isFeatureEnabled(feature);
+        final boolean enabled = FeatureManager.getInstance().isFeatureEnabled(feature);
         final boolean xorEnabled = enabled ^ featureFlag.inverse();
         final MethodSignature signature = (MethodSignature) point.getSignature();
         final boolean throwToggleOffError = featureFlag.throwToggleOffError();
