@@ -1,0 +1,9 @@
+CREATE TABLE STATIC_ENVIRONMENTS (
+	env_key serial PRIMARY KEY,
+	env_name VARCHAR (10) UNIQUE NOT NULL,
+	env_description VARCHAR (10) NOT NULL,
+	created_by VARCHAR (100) NOT NULL,
+	created_on TIMESTAMP NOT NULL,
+    updated_by VARCHAR (100) NOT NULL,
+	updated_on TIMESTAMP NOT NULL
+);
